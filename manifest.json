@@ -1,0 +1,9 @@
+{
+	"id": "pdf-bilink",
+	"name": "PDF Bilink",
+	"version": "0.1.0",
+	"minAppVersion": "1.5.8",
+	"description": "Minimal bidirectional PDF<->note linking: rectangular selection links, PDF-side backlink click-to-jump (single/list), and freeform text boxes on PDF pages.",
+	"author": "heptazero",
+	"isDesktopOnly": false
+}

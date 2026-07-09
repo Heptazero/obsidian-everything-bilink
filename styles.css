@@ -1,0 +1,176 @@
+.pdf-bilink-layer {
+	z-index: 2;
+	/* Establishes a container so text-box font-size can be expressed in cqh units
+	   and thus scale with the page's rendered height on zoom. */
+	container-type: size;
+}
+
+.pdf-bilink-textbox {
+	position: absolute;
+	box-sizing: border-box;
+	pointer-events: auto;
+	border: 1px solid transparent;
+	/* Above backlink highlights so clicks/edits land on the text box, not a
+	   highlight beneath it. */
+	z-index: 2;
+}
+
+.pdf-bilink-textbox:hover,
+.pdf-bilink-textbox:focus-within {
+	border-color: var(--interactive-accent);
+}
+
+.pdf-bilink-textbox-content {
+	width: 100%;
+	height: 100%;
+	outline: none;
+	overflow: hidden;
+	white-space: pre-wrap;
+	line-height: 1.2;
+	/* Fixed dark ink so text stays readable on a white PDF page regardless of theme. */
+	color: #1f1f1f;
+}
+
+.pdf-bilink-textbox-toolbar {
+	position: absolute;
+	top: -24px;
+	left: 0;
+	display: none;
+	gap: 2px;
+	align-items: center;
+	padding: 2px;
+	border-radius: 4px;
+	background: var(--background-secondary);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.pdf-bilink-textbox:hover .pdf-bilink-textbox-toolbar,
+.pdf-bilink-textbox:focus-within .pdf-bilink-textbox-toolbar {
+	display: flex;
+}
+
+.pdf-bilink-textbox-toolbar button {
+	padding: 0 6px;
+	height: 20px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.pdf-bilink-textbox-grip {
+	cursor: move;
+	padding: 0 4px;
+	color: var(--text-muted);
+	user-select: none;
+}
+
+.pdf-bilink-textbox-color {
+	width: 20px;
+	height: 18px;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+}
+
+.pdf-bilink-textbox-del {
+	color: var(--text-error);
+}
+
+.pdf-bilink-textbox-resize {
+	position: absolute;
+	right: -5px;
+	bottom: -5px;
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	background: var(--interactive-accent);
+	cursor: nwse-resize;
+	display: none;
+}
+
+.pdf-bilink-textbox:hover .pdf-bilink-textbox-resize,
+.pdf-bilink-textbox:focus-within .pdf-bilink-textbox-resize {
+	display: block;
+}
+
+.pdf-bilink-drawing-box {
+	background-color: var(--interactive-accent);
+	opacity: 0.25;
+	border: 1.5px dashed var(--interactive-accent);
+	pointer-events: none;
+}
+
+.pdf-bilink-flash-highlight {
+	background-color: var(--text-highlight-bg);
+	opacity: 0.55;
+	pointer-events: none;
+	transition: opacity 0.4s ease-out;
+}
+
+.pdf-bilink-flash-highlight.pdf-bilink-fade-out {
+	opacity: 0;
+}
+
+.pdf-bilink-persistent-highlight {
+	background-color: var(--text-highlight-bg);
+	opacity: 0.35;
+	border: 1px solid var(--text-highlight-bg);
+	border-radius: 2px;
+	transition: opacity 0.15s ease-out;
+}
+
+.pdf-bilink-persistent-highlight:hover {
+	opacity: 0.55;
+}
+
+.pdf-bilink-persistent-highlight.pdf-bilink-editing {
+	opacity: 0.5;
+	outline: 2px dashed var(--interactive-accent);
+	z-index: 3;
+}
+
+.pdf-bilink-edit-grip {
+	position: absolute;
+	inset: 0;
+	cursor: move;
+}
+
+.pdf-bilink-edit-resize {
+	position: absolute;
+	right: -5px;
+	bottom: -5px;
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	background: var(--interactive-accent);
+	cursor: nwse-resize;
+}
+
+.pdf-bilink-edit-bar {
+	position: absolute;
+	top: -26px;
+	right: 0;
+	display: flex;
+	gap: 4px;
+}
+
+.pdf-bilink-edit-bar button {
+	width: 24px;
+	height: 22px;
+	cursor: pointer;
+}
+
+.pdf-bilink-preview-img,
+.pdf-bilink-embed-img {
+	display: block;
+	max-width: 100%;
+	margin-top: 4px;
+	border-radius: 4px;
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+}
+
+.pdf-bilink-embed {
+	display: inline-block;
+	max-width: 100%;
+}

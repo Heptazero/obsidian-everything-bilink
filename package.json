@@ -1,0 +1,26 @@
+{
+	"name": "pdf-bilink",
+	"version": "0.1.0",
+	"description": "Minimal bidirectional PDF<->note linking for Obsidian.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Heptazero/obsidian-pdf-bilink"
+	},
+	"devDependencies": {
+		"@types/node": "^20.0.0",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "^0.21.0",
+		"obsidian": "^1.5.7",
+		"tslib": "^2.6.0",
+		"typescript": "^5.4.0"
+	},
+	"dependencies": {
+		"monkey-around": "^3.0.0"
+	}
+}
