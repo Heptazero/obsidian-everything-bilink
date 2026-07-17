@@ -1,5 +1,7 @@
-import { Component, FileView, Notice, Plugin, TFile } from "obsidian";
+import { Component, FileView, MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { findBacklinksForPDF, type BacklinkRef } from "./backlink-index";
+import { cleanUnusedBlockIds } from "./block-ref-cleanup";
+import { copyBlockReference, hasActiveNoteSelection } from "./block-ref-copy";
 import { renderBacklinkHighlights } from "./backlink-render";
 import { registerRectEmbed } from "./embed";
 import { buildSubpath, registerLinkOpenPatch } from "./link-open";
@@ -7,6 +9,7 @@ import { onPageReady, onTextLayerReady, type PdfRect } from "./pdf-layer";
 import type { PDFPageView } from "./pdfjs-types";
 import { registerRectPreview } from "./preview";
 import { attachRectSelectListener, type RectSelectController } from "./rect-select";
+import { copySelectionAsQuote, copySelectionAsWikilink, hasActiveTextSelection } from "./text-select-copy";
 import {
 	attachTextPlaceListener,
 	placeNewTextBox,
@@ -34,8 +37,8 @@ export default class PdfBilinkPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.scanPDFViews()));
 		this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.scanPDFViews()));
 
-		this.addRibbonIcon("frame", "PDF Bilink: 框选区域 → 复制链接", () => this.armRectSelect());
-		this.addRibbonIcon("type", "PDF Bilink: 在 PDF 上添加文字框", () => this.armTextPlace());
+		this.addRibbonIcon("frame", "Everything Bilink: 框选区域 → 复制链接", () => this.armRectSelect());
+		this.addRibbonIcon("type", "Everything Bilink: 在 PDF 上添加文字框", () => this.armTextPlace());
 		this.addCommand({
 			id: "draw-region-link",
 			name: "框选区域 → 复制链接(笔记里是活嵌入,Excalidraw 里是带链接的图片)",
@@ -53,6 +56,42 @@ export default class PdfBilinkPlugin extends Plugin {
 				const view = this.app.workspace.getActiveViewOfType(FileView);
 				const active = !!view && view.getViewType() === "pdf";
 				if (!checking && active) this.armTextPlace();
+				return active;
+			},
+		});
+		this.addCommand({
+			id: "copy-selection-as-wikilink",
+			name: "[PDF 选区] 复制为单行双链(标题=选中文字)",
+			checkCallback: (checking) => {
+				const active = hasActiveTextSelection();
+				if (!checking && active) void copySelectionAsWikilink(this.app);
+				return active;
+			},
+		});
+		this.addCommand({
+			id: "copy-selection-as-quote",
+			name: "[PDF 选区] 复制为引用块(> 文字 + 链接两行)",
+			checkCallback: (checking) => {
+				const active = hasActiveTextSelection();
+				if (!checking && active) void copySelectionAsQuote(this.app);
+				return active;
+			},
+		});
+		this.addCommand({
+			id: "copy-block-reference",
+			name: "[笔记选区,非 PDF] 复制为块引用",
+			checkCallback: (checking) => {
+				const active = hasActiveNoteSelection(this.app);
+				if (!checking && active) void copyBlockReference(this.app);
+				return active;
+			},
+		});
+		this.addCommand({
+			id: "clean-unused-block-ids",
+			name: "[笔记] 清理未被引用的块标记(^id)",
+			checkCallback: (checking) => {
+				const active = !!this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!checking && active) void cleanUnusedBlockIds(this.app);
 				return active;
 			},
 		});
@@ -134,7 +173,13 @@ export default class PdfBilinkPlugin extends Plugin {
 			refreshHighlights();
 		});
 
+		// "resolved" (docs: fires "each time files get modified") is the natural fit
+		// here, but is unreliable/delayed in practice — "changed" fires deterministically
+		// right after any single file's cache updates, so it's the real fix for stale
+		// highlights (e.g. a deleted reference not disappearing until something else
+		// happened to force a redraw).
 		component.registerEvent(this.app.metadataCache.on("resolved", refreshHighlights));
+		component.registerEvent(this.app.metadataCache.on("changed", refreshHighlights));
 	}
 
 	private async completeRectSelection(view: FileView, pageNumber: number, rect: PdfRect): Promise<void> {

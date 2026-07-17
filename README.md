@@ -1,7 +1,10 @@
-# PDF Bilink
+# Everything Bilink
 
-Minimal bidirectional linking between PDF regions and notes, for people who only
-need a small slice of what PDF++ offers.
+Bidirectional referencing, for two different carriers: PDF regions/selections,
+and note blocks. Same idea both times — reference something, jump back and forth
+— for people who only need that slice, not a full annotation suite.
+
+## PDF ↔ note
 
 - Draw a rectangular selection on a PDF page → get a link. Paste it anywhere.
   - In a note: renders as a live cropped preview (nothing saved to disk, re-crops
@@ -17,10 +20,21 @@ need a small slice of what PDF++ offers.
 - Highlighted regions can be edited in place (drag to move/resize, writes the new
   coordinates back into every note that references it) or deleted everywhere at once.
 
+## Note ↔ note
+
+- Select text in any note → copy it as a block reference (`[[note#^id|selected
+  text]]`). Obsidian's native block references are the finest built-in granularity
+  (no character-level addressing outside PDF.js), so navigation lands on the whole
+  block; the link's title preserves exactly what was selected.
+- The `^id` marker is only written after the copy actually succeeds — a failed
+  copy leaves the note untouched.
+- A cleanup command scans a note for `^id` markers nothing in the vault links to
+  anymore, and offers to strip them.
+
 ## Why
 
-PDF++ does all of this and much more. This plugin exists for a narrower need:
-just the region/selection ↔ note round-trip, without the rest of PDF++'s surface
+PDF++ does all of the PDF side and much more. This plugin exists for a narrower
+need: just the region/selection ↔ note round-trip, without the rest of its surface
 area (color coding, annotations, page composer, etc).
 
 ## Install
@@ -28,7 +42,7 @@ area (color coding, annotations, page composer, etc).
 Not on the community plugin list. Clone or use BRAT:
 
 ```
-Heptazero/obsidian-pdf-bilink
+Heptazero/obsidian-everything-bilink
 ```
 
 ## Develop
@@ -38,4 +52,4 @@ npm install
 npm run dev    # esbuild watch, builds main.js in place
 ```
 
-Drop the folder into `<vault>/.obsidian/plugins/pdf-bilink` and enable it.
+Drop the folder into `<vault>/.obsidian/plugins/everything-bilink` and enable it.

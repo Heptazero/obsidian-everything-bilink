@@ -17,7 +17,7 @@ async function renderRectToCanvas(
 	const pdfjsLib = (window as unknown as { pdfjsLib?: any }).pdfjsLib;
 	if (!pdfjsLib) {
 		console.warn(
-			"pdf-bilink: window.pdfjsLib is not loaded yet (Obsidian only loads it once a PDF has been opened this session). Open any PDF once, then retry."
+			"everything-bilink: window.pdfjsLib is not loaded yet (Obsidian only loads it once a PDF has been opened this session). Open any PDF once, then retry."
 		);
 		return null;
 	}

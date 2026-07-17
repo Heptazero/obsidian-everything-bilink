@@ -1,9 +1,9 @@
 {
-	"id": "pdf-bilink",
-	"name": "PDF Bilink",
-	"version": "0.1.0",
+	"id": "everything-bilink",
+	"name": "Everything Bilink",
+	"version": "0.2.0",
 	"minAppVersion": "1.5.8",
-	"description": "Minimal bidirectional PDF<->note linking: rectangular selection links, PDF-side backlink click-to-jump (single/list), and freeform text boxes on PDF pages.",
+	"description": "Bidirectional referencing for everything: rectangular/text-selection PDF<->note links, PDF-side backlink click-to-jump, freeform text boxes on PDF pages, and block-level quote references between notes.",
 	"author": "heptazero",
 	"isDesktopOnly": false
 }

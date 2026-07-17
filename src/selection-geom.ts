@@ -12,7 +12,7 @@ export function parseSelection(value: string): Selection | null {
 
 // Obsidian's TextLayerBuilder shape differs by version: v1.8.0+ nests the data
 // under `.textLayer`, older versions expose textDivs/textContentItems directly.
-function getTextLayerInfo(pageView: PDFPageView): TextLayerInfo | null {
+export function getTextLayerInfo(pageView: PDFPageView): TextLayerInfo | null {
 	const tl = pageView.textLayer as { textLayer?: TextLayerInfo; textDivs?: HTMLElement[] } | undefined;
 	if (!tl) return null;
 	if (tl.textLayer?.textDivs) return tl.textLayer;

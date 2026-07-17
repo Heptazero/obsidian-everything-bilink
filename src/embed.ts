@@ -46,7 +46,7 @@ class RectEmbed extends Component {
 		if (url) {
 			img.src = url;
 		} else {
-			containerEl.setText("⚠ PDF Bilink: 无法渲染该区域(先打开一次任意 PDF 让 pdf.js 加载,再刷新)");
+			containerEl.setText("⚠ Everything Bilink: 无法渲染该区域(先打开一次任意 PDF 让 pdf.js 加载,再刷新)");
 		}
 	}
 }
@@ -55,7 +55,7 @@ export function registerRectEmbed(plugin: { app: App; register: (cb: () => void)
 	const registry = (plugin.app as unknown as { embedRegistry?: { embedByExtension?: Record<string, EmbedCreator> } })
 		.embedRegistry;
 	if (!registry?.embedByExtension) {
-		console.warn("pdf-bilink: app.embedRegistry unavailable — embed preview disabled.");
+		console.warn("everything-bilink: app.embedRegistry unavailable — embed preview disabled.");
 		return;
 	}
 

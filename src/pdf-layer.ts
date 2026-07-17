@@ -18,6 +18,28 @@ function getViewerComponent(view: FileView): PDFViewerComponent | null {
 	return (view as unknown as { viewer?: PDFViewerComponent }).viewer ?? null;
 }
 
+interface PageInfo {
+	pageNumber: number;
+	pageView: PDFPageView;
+	view: FileView;
+}
+
+// Populated by onPageReady below; lets any code (e.g. "what page is this DOM
+// selection on?") map a page's DOM node back to its page number/view without every
+// caller needing its own bookkeeping.
+const pageInfoByDiv = new WeakMap<HTMLDivElement, PageInfo>();
+
+/** Walks up from any DOM node to find which tracked PDF page (if any) contains it. */
+export function getPageInfoForNode(node: Node | null): PageInfo | null {
+	let el: HTMLElement | null = node instanceof HTMLElement ? node : node?.parentElement ?? null;
+	while (el) {
+		const info = pageInfoByDiv.get(el as HTMLDivElement);
+		if (info) return info;
+		el = el.parentElement;
+	}
+	return null;
+}
+
 /**
  * Runs `cb` for every page already rendered, then again every time pdf.js (re)renders
  * a page (it recycles page DOM on zoom/scroll, so this can fire more than once per page).
@@ -28,14 +50,19 @@ export function onPageReady(
 	owner: Component,
 	cb: (pageNumber: number, pageView: PDFPageView) => void
 ): void {
+	const track = (pageNumber: number, pageView: PDFPageView) => {
+		pageInfoByDiv.set(pageView.div, { pageNumber, pageView, view });
+		cb(pageNumber, pageView);
+	};
+
 	const attach = (obsidianViewer: ObsidianViewer) => {
 		const pdfViewer = obsidianViewer.pdfViewer;
 		if (!pdfViewer) return;
 
-		pdfViewer._pages?.forEach((pageView, i) => cb(i + 1, pageView));
+		pdfViewer._pages?.forEach((pageView, i) => track(i + 1, pageView));
 
 		const handler = (data: { source: PDFPageView; pageNumber: number }) => {
-			cb(data.pageNumber, data.source);
+			track(data.pageNumber, data.source);
 		};
 		obsidianViewer.eventBus?.on("pagerendered", handler);
 		owner.register(() => obsidianViewer.eventBus?.off("pagerendered", handler));

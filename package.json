@@ -1,7 +1,7 @@
 {
-	"name": "pdf-bilink",
-	"version": "0.1.0",
-	"description": "Minimal bidirectional PDF<->note linking for Obsidian.",
+	"name": "everything-bilink",
+	"version": "0.2.0",
+	"description": "Bidirectional referencing for everything: PDF regions/selections and note block quotes.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
@@ -10,7 +10,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Heptazero/obsidian-pdf-bilink"
+		"url": "https://github.com/Heptazero/obsidian-everything-bilink"
 	},
 	"devDependencies": {
 		"@types/node": "^20.0.0",
