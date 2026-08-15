@@ -4,13 +4,13 @@ import { deleteRefsFromSources, updateRectInSources } from "./backlink-edit";
 import { ConfirmModal } from "./confirm-modal";
 import { getOverlayLayer, placeRect, screenToPdfPoint, type PdfRect } from "./pdf-layer";
 import type { PDFPageView } from "./pdfjs-types";
-import { computeSelectionRects } from "./selection-geom";
+import { computeSelectionRects, type SelectionLineRect } from "./selection-geom";
 import { buildSubpath } from "./subpath";
 
 interface HighlightItem {
 	page: number;
 	/** One or more boxes to draw (a text selection can wrap across lines). */
-	rects: PdfRect[];
+	rects: SelectionLineRect[];
 	refs: BacklinkRef[];
 	/** Rect anchors can be dragged/resized; selection anchors are text-bound, so no. */
 	editable: boolean;
@@ -35,7 +35,7 @@ function buildRectItems(app: App, pdfFile: TFile, refs: BacklinkRef[]): Highligh
 	}
 	return [...groups.values()].map((g) => ({
 		page: g.page,
-		rects: [g.rect],
+		rects: [{ rect: g.rect, heightRatio: 1 }],
 		refs: g.refs,
 		editable: true,
 		copyLink: () => {
@@ -53,7 +53,7 @@ function buildSelectionItems(
 	pageView: PDFPageView,
 	refs: BacklinkRef[]
 ): HighlightItem[] {
-	const groups = new Map<string, { page: number; selKey: string; refs: BacklinkRef[]; rects: PdfRect[] }>();
+	const groups = new Map<string, { page: number; selKey: string; refs: BacklinkRef[]; rects: SelectionLineRect[] }>();
 	for (const ref of refs) {
 		if (ref.kind !== "selection") continue;
 		const key = ref.selection.join(",");
@@ -149,7 +149,7 @@ function showMenu(app: App, pageView: PDFPageView, layer: HTMLElement, box: HTML
 			i
 				.setTitle("编辑区域(改大小/位置)")
 				.setIcon("move")
-				.onClick(() => enterRectEdit(app, pageView, layer, box, item.refs, item.rects[0]))
+				.onClick(() => enterRectEdit(app, pageView, layer, box, item.refs, item.rects[0].rect))
 		);
 	}
 	menu.addItem((i) =>
@@ -186,13 +186,17 @@ export function renderBacklinkHighlights(app: App, pdfFile: TFile, pageView: PDF
 
 	for (const item of items) {
 		// One item may draw several boxes (multi-line selection); they share handlers.
-		for (const rect of item.rects) {
+		for (const { rect, heightRatio } of item.rects) {
 			// Rect selections stay boxes (they represent an actual region); text
 			// selections render as an underline (reads more like normal markup).
 			const box = layer.createDiv(
 				`pdf-bilink-persistent-highlight ${item.editable ? "pdf-bilink-kind-rect" : "pdf-bilink-kind-selection"}`
 			);
 			box.setCssStyles({ pointerEvents: "auto", cursor: "pointer" });
+			// Scales the underline's configured offset down when this box is taller
+			// than a normal single line (a formula character or super/subscript
+			// mixed into the selected span) — see SelectionLineRect.heightRatio.
+			box.style.setProperty("--bilink-line-ratio", String(heightRatio));
 			if (item.refs.length > 1) box.setAttribute("aria-label", `${item.refs.length} 处引用`);
 			placeRect(pageView, layer, rect, box);
 

@@ -5,9 +5,12 @@ export type RectStyle = "box" | "background";
 /** How to fill a gap where the selection skipped non-selectable content (a formula). */
 export type FormulaRecovery = "auto" | "auto+picker" | "off";
 
+export type RectCopyMode = "embed" | "link";
+
 export interface BilinkSettings {
 	selectionStyle: SelectionStyle;
 	rectStyle: RectStyle;
+	rectCopyMode: RectCopyMode;
 	/** Empty = follow the theme's accent color. */
 	highlightColor: string;
 	useThemeColor: boolean;
@@ -27,6 +30,7 @@ export interface BilinkSettings {
 export const DEFAULT_SETTINGS: BilinkSettings = {
 	selectionStyle: "underline",
 	rectStyle: "box",
+	rectCopyMode: "embed",
 	highlightColor: "#e0ac00",
 	useThemeColor: true,
 	underlineThickness: 2,
@@ -136,6 +140,19 @@ export class BilinkSettingTab extends PluginSettingTab {
 					commit();
 				})
 		);
+
+		new Setting(containerEl)
+			.setName("框选区域粘贴为")
+			.setDesc("图片嵌入可以直接在笔记里预览裁剪出的画面;仅链接不出图,粘贴出来是「PDF 选区 → 仅链接」那条模板配置的样式。")
+			.addDropdown((d) =>
+				d
+					.addOptions({ embed: "图片嵌入(可预览)", link: "仅链接(不出图)" })
+					.setValue(this.settings.rectCopyMode)
+					.onChange((v) => {
+						this.settings.rectCopyMode = v as RectCopyMode;
+						commit();
+					})
+			);
 
 		new Setting(containerEl)
 			.setName("使用主题强调色")

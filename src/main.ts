@@ -12,6 +12,7 @@ import { registerRectPreview } from "./preview";
 import { attachRectSelectListener, type RectSelectController } from "./rect-select";
 import {
 	applyStyleSettings,
+	applyTemplate,
 	BilinkSettingTab,
 	clearStyleSettings,
 	loadSettings,
@@ -243,6 +244,22 @@ export default class PdfBilinkPlugin extends Plugin {
 		if (!(file instanceof TFile)) return;
 
 		const subpath = buildSubpath(pageNumber, rect);
+
+		if (this.bilinkSettings.rectCopyMode === "link") {
+			// Same template as "PDF 选区 → 仅链接" — no image, just the configured
+			// link style, for when the crop preview isn't wanted.
+			const link = this.app.fileManager.generateMarkdownLink(file, "", subpath, this.bilinkSettings.jumpLabel || undefined);
+			const text = applyTemplate(this.bilinkSettings.linkOnlyTemplate, {
+				text: "",
+				link,
+				file: file.basename,
+				page: String(pageNumber),
+			});
+			await navigator.clipboard.writeText(text);
+			new Notice(`已复制区域链接:\n${text}`);
+			return;
+		}
+
 		// Embed (leading "!"). In a note this plugin renders it as a live cropped
 		// image (click-to-jump); pasted onto an Excalidraw canvas, Excalidraw renders
 		// the same `rect=` crop natively and binds the link to the image element.

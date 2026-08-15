@@ -151,17 +151,25 @@ body[data-bilink-rect-style="background"] .pdf-bilink-kind-rect:hover {
 
 .pdf-bilink-kind-selection {
 	position: relative;
+	/* 1 for an ordinary line; set per-box in JS when the box is taller than a
+	   normal line (a formula character or super/subscript mixed into the
+	   selection) — see backlink-render.ts / SelectionLineRect.heightRatio. */
+	--bilink-line-ratio: 1;
 }
 
 /* The rect spans the full line box (ascender to descender), so a bar flush with
    its bottom edge sits visibly below the letters. The offset lifts it onto the
-   text; it's a setting because the right amount depends on the font and zoom. */
+   text; it's a setting because the right amount depends on the font and zoom.
+   Scaling by --bilink-line-ratio keeps that lift visually consistent even when
+   this particular box is taller than a normal line: `bottom: X%` alone is a
+   percentage of THIS box's own height, so the same X% would lift the mark much
+   further on a tall box than on a normal one for no reason the eye can see. */
 body[data-bilink-sel-style="underline"] .pdf-bilink-kind-selection::after {
 	content: "";
 	position: absolute;
 	left: 0;
 	right: 0;
-	bottom: var(--bilink-underline-offset);
+	bottom: calc(var(--bilink-underline-offset) * var(--bilink-line-ratio));
 	height: var(--bilink-underline-thickness);
 	border-radius: 1px;
 	background-color: var(--bilink-color);
