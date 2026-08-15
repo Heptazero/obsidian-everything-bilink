@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownView, Notice, TFile } from "obsidian";
+import { applyTemplate, type BilinkSettings } from "./settings";
 
 /**
  * Finds the line range of the "block" containing `line`. List items are treated
@@ -31,26 +32,24 @@ function writeBlockId(editor: Editor, end: number, id: string): void {
 	editor.replaceRange(` ^${id}`, pos, pos);
 }
 
-// Wikilink alias can't safely contain these without breaking [[...]] syntax.
-function sanitizeAlias(text: string): string {
-	return text
-		.replace(/\s+/g, " ")
-		.replace(/[[\]|]/g, "")
-		.trim()
-		.slice(0, 300);
+function sanitizeQuoteText(text: string): string {
+	return text.replace(/\s+/g, " ").trim().slice(0, 500);
 }
 
 /**
- * Copies `[[note#^blockid|selected text]]` for the current editor selection.
- * Navigation lands on the whole block (Obsidian's native finest granularity);
- * the alias preserves exactly what was selected for display.
+ * Copies `> {selected text}[[note#^blockid|↗]]` for the current editor selection.
+ * The real text sits in the blockquote body (rendered as normal Markdown — LaTeX,
+ * bold, etc. all work); the link carries only a jump arrow, since a wikilink
+ * ALIAS is always rendered as plain text in Obsidian — putting the actual content
+ * there (the previous approach) silently broke any formula in the selection.
+ * Navigation lands on the whole block (Obsidian's native finest granularity).
  *
  * The `^blockid` marker is only written into the note AFTER the clipboard write
  * succeeds — previously it was written unconditionally up front, so even a copy
  * that failed (or was never actually pasted anywhere) left a permanent orphaned
  * marker with nothing referencing it.
  */
-export async function copyBlockReference(app: App): Promise<void> {
+export async function copyBlockReference(app: App, settings: BilinkSettings): Promise<void> {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	if (!view) {
 		new Notice("先在一篇笔记里选中文字");
@@ -70,10 +69,16 @@ export async function copyBlockReference(app: App): Promise<void> {
 	const existing = existingBlockId(editor, end);
 	const id = existing ?? Math.random().toString(36).slice(2, 8);
 
-	const link = app.fileManager.generateMarkdownLink(file, "", `#^${id}`, sanitizeAlias(selectedText));
+	const link = app.fileManager.generateMarkdownLink(file, "", `#^${id}`, settings.jumpLabel || undefined);
+	const quote = applyTemplate(settings.blockRefTemplate, {
+		text: sanitizeQuoteText(selectedText),
+		link,
+		file: file.basename,
+		page: "",
+	});
 
 	try {
-		await navigator.clipboard.writeText(link);
+		await navigator.clipboard.writeText(quote);
 	} catch (err) {
 		new Notice(`复制失败,笔记未被修改: ${err instanceof Error ? err.message : err}`);
 		return;

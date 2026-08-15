@@ -1,6 +1,7 @@
 import { App, Component, debounce, normalizePath, type Plugin } from "obsidian";
 import { getOverlayLayer, placeRect, screenToPdfPoint, type PdfRect } from "./pdf-layer";
 import type { PDFPageView } from "./pdfjs-types";
+import { patchPluginData } from "./settings";
 
 export interface TextBoxAnnotation {
 	id: string;
@@ -30,7 +31,13 @@ const DEFAULT_COLOR = "#1f1f1f";
 /** Owns the persisted text-box data and debounced saving. */
 export class TextBoxStore {
 	private data: PluginData = { ...DEFAULT_DATA };
-	private save = debounce(() => void this.plugin.saveData(this.data), 500, true);
+	// Merges onto whatever is on disk instead of overwriting the file, so saving a
+	// text box can't drop the settings block that lives alongside it in data.json.
+	private save = debounce(
+		() => void patchPluginData(this.plugin, { version: 1, pdfTextBoxes: this.data.pdfTextBoxes }),
+		500,
+		true
+	);
 
 	constructor(private plugin: Plugin) {}
 

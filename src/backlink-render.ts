@@ -187,7 +187,11 @@ export function renderBacklinkHighlights(app: App, pdfFile: TFile, pageView: PDF
 	for (const item of items) {
 		// One item may draw several boxes (multi-line selection); they share handlers.
 		for (const rect of item.rects) {
-			const box = layer.createDiv("pdf-bilink-persistent-highlight");
+			// Rect selections stay boxes (they represent an actual region); text
+			// selections render as an underline (reads more like normal markup).
+			const box = layer.createDiv(
+				`pdf-bilink-persistent-highlight ${item.editable ? "pdf-bilink-kind-rect" : "pdf-bilink-kind-selection"}`
+			);
 			box.setCssStyles({ pointerEvents: "auto", cursor: "pointer" });
 			if (item.refs.length > 1) box.setAttribute("aria-label", `${item.refs.length} 处引用`);
 			placeRect(pageView, layer, rect, box);

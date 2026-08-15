@@ -1,5 +1,5 @@
 import { App, Component, FileView } from "obsidian";
-import type { ObsidianViewer, PDFPageView, PDFViewerComponent } from "./pdfjs-types";
+import type { ObsidianViewer, PDFDocumentProxy, PDFPageView, PDFViewerComponent } from "./pdfjs-types";
 
 const OVERLAY_CLASS = "pdf-bilink-layer";
 
@@ -16,6 +16,16 @@ function getViewerComponent(view: FileView): PDFViewerComponent | null {
 	// Obsidian's PDF FileView exposes `.viewer` (a PDFViewerComponent); undocumented
 	// but stable across recent Obsidian versions (same chain PDF++ relies on).
 	return (view as unknown as { viewer?: PDFViewerComponent }).viewer ?? null;
+}
+
+/**
+ * The live pdf.js document of an open PDF view. Reading it off the already-open
+ * viewer avoids re-parsing the file from disk just to read its outline; it's null
+ * only while the document is still loading.
+ */
+export function getPdfDocument(view: FileView): PDFDocumentProxy | null {
+	const obsidianViewer = getViewerComponent(view)?.child?.pdfViewer;
+	return obsidianViewer?.pdfViewer?.pdfDocument ?? obsidianViewer?.pdfDocument ?? null;
 }
 
 interface PageInfo {

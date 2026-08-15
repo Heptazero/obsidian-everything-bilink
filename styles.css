@@ -111,16 +111,82 @@
 	opacity: 0;
 }
 
-.pdf-bilink-persistent-highlight {
-	background-color: var(--text-highlight-bg);
-	opacity: 0.35;
-	border: 1px solid var(--text-highlight-bg);
-	border-radius: 2px;
-	transition: opacity 0.15s ease-out;
+/* Marker appearance is driven by settings, which set --bilink-* custom properties
+   and data-bilink-*-style attributes on <body> (see settings.ts). The fallbacks
+   here keep the plugin looking right if the stylesheet loads before settings do. */
+/* Fallbacks live on :root, not on the highlight itself — a value defined on the
+   element would shadow the one settings.ts writes onto <body>. */
+:root {
+	--bilink-color: var(--interactive-accent);
+	--bilink-underline-thickness: 2px;
+	--bilink-underline-offset: 10%;
 }
 
-.pdf-bilink-persistent-highlight:hover {
-	opacity: 0.55;
+.pdf-bilink-persistent-highlight {
+	background-color: transparent;
+	transition: background-color 0.15s ease-out;
+}
+
+/* --- rect selections --- */
+
+body[data-bilink-rect-style="box"] .pdf-bilink-kind-rect {
+	border: 1px solid var(--bilink-color);
+	border-radius: 2px;
+}
+
+body[data-bilink-rect-style="box"] .pdf-bilink-kind-rect:hover {
+	background-color: color-mix(in srgb, var(--bilink-color) 20%, transparent);
+}
+
+body[data-bilink-rect-style="background"] .pdf-bilink-kind-rect {
+	background-color: color-mix(in srgb, var(--bilink-color) 18%, transparent);
+	border-radius: 2px;
+}
+
+body[data-bilink-rect-style="background"] .pdf-bilink-kind-rect:hover {
+	background-color: color-mix(in srgb, var(--bilink-color) 34%, transparent);
+}
+
+/* --- text selections --- */
+
+.pdf-bilink-kind-selection {
+	position: relative;
+}
+
+/* The rect spans the full line box (ascender to descender), so a bar flush with
+   its bottom edge sits visibly below the letters. The offset lifts it onto the
+   text; it's a setting because the right amount depends on the font and zoom. */
+body[data-bilink-sel-style="underline"] .pdf-bilink-kind-selection::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: var(--bilink-underline-offset);
+	height: var(--bilink-underline-thickness);
+	border-radius: 1px;
+	background-color: var(--bilink-color);
+}
+
+body[data-bilink-sel-style="underline"] .pdf-bilink-kind-selection:hover::after {
+	height: calc(var(--bilink-underline-thickness) + 1px);
+}
+
+body[data-bilink-sel-style="background"] .pdf-bilink-kind-selection {
+	background-color: color-mix(in srgb, var(--bilink-color) 22%, transparent);
+	border-radius: 2px;
+}
+
+body[data-bilink-sel-style="background"] .pdf-bilink-kind-selection:hover {
+	background-color: color-mix(in srgb, var(--bilink-color) 38%, transparent);
+}
+
+body[data-bilink-sel-style="box"] .pdf-bilink-kind-selection {
+	border: 1px solid var(--bilink-color);
+	border-radius: 2px;
+}
+
+body[data-bilink-sel-style="box"] .pdf-bilink-kind-selection:hover {
+	background-color: color-mix(in srgb, var(--bilink-color) 20%, transparent);
 }
 
 .pdf-bilink-persistent-highlight.pdf-bilink-editing {
@@ -173,4 +239,13 @@
 .pdf-bilink-embed {
 	display: inline-block;
 	max-width: 100%;
+}
+
+.formula-picker-code {
+	display: block;
+	margin-top: 2px;
+	color: var(--text-accent);
+	font-size: 0.9em;
+	white-space: pre-wrap;
+	word-break: break-all;
 }

@@ -36,17 +36,35 @@ export interface PDFEventBus {
 	off(name: string, cb: (data: any) => void): void;
 }
 
+export interface PDFOutlineItem {
+	title: string;
+	// Either a named destination (string) or an explicit one: [pageRef, {name}, ...args].
+	dest: string | unknown[] | null;
+	url?: string | null;
+	items?: PDFOutlineItem[];
+}
+
+export interface PDFDocumentProxy {
+	numPages: number;
+	/** null when the PDF carries no bookmarks/outline at all. */
+	getOutline(): Promise<PDFOutlineItem[] | null>;
+	getDestination(id: string): Promise<unknown[] | null>;
+	getPageIndex(ref: unknown): Promise<number>;
+}
+
 export interface PDFViewer {
 	_pages: PDFPageView[];
 	eventBus: PDFEventBus;
 	getPageView(index: number): PDFPageView | undefined;
 	currentPageNumber: number;
+	pdfDocument?: PDFDocumentProxy;
 }
 
 // Obsidian's wrapper around the real pdf.js PDFViewerApplication-like object.
 export interface ObsidianViewer {
 	pdfViewer: PDFViewer;
 	eventBus: PDFEventBus;
+	pdfDocument?: PDFDocumentProxy;
 }
 
 export interface PDFViewerChild {
