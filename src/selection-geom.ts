@@ -36,6 +36,14 @@ export interface SelectionLineRect {
 	 * differently depending on which of those two heights X% is taken of.
 	 */
 	heightRatio: number;
+	/**
+	 * True when this line bridges a horizontal gap wide enough to be a skipped
+	 * (non-selectable) formula — see mergeIntoLines(). The line's top/bottom in
+	 * that case come entirely from the flanking text on either side of the gap;
+	 * there is no text-layer geometry for whatever sits in the gap itself, so
+	 * nothing here actually knows how tall or how deep it renders.
+	 */
+	hasGap: boolean;
 }
 
 /**
@@ -72,7 +80,7 @@ export function computeSelectionRects(pageView: PDFPageView, sel: Selection): Se
 	for (const line of merged) {
 		const [x0, y0] = screenToPdfPoint(pageView, line.left, line.bottom);
 		const [x1, y1] = screenToPdfPoint(pageView, line.right, line.top);
-		rects.push({ rect: [x0, y0, x1, y1], heightRatio: line.heightRatio });
+		rects.push({ rect: [x0, y0, x1, y1], heightRatio: line.heightRatio, hasGap: line.hasGap });
 	}
 	return rects;
 }
@@ -83,6 +91,7 @@ interface LineBox {
 	top: number;
 	bottom: number;
 	heightRatio: number;
+	hasGap: boolean;
 }
 
 function median(values: number[]): number {
@@ -118,10 +127,25 @@ function median(values: number[]): number {
  * normal text pulls the merged box's `top` up or `bottom` down (span heights
  * disagree) without moving the *median* baseline — so the box grows taller
  * than any single span, and this ratio drops below 1 to record that.
+ *
+ * Separately, each line records whether it bridges a gap at all (see `hasGap`
+ * on LineBox / SelectionLineRect). heightRatio corrects for a formula
+ * character that DID land in the text layer skewing the box's height; hasGap
+ * flags the opposite case, where the formula (or part of it) has NO text-layer
+ * presence at all, so this function has zero geometry for it and the caller
+ * has to fall back to a rule of thumb instead of measuring.
  */
 function mergeIntoLines(rects: DOMRect[]): LineBox[] {
 	const sorted = [...rects].sort((a, b) => a.top - b.top || a.left - b.left);
-	const lines: { left: number; right: number; top: number; maxBottom: number; bottoms: number[]; heights: number[] }[] = [];
+	const lines: {
+		left: number;
+		right: number;
+		top: number;
+		maxBottom: number;
+		bottoms: number[];
+		heights: number[];
+		spans: DOMRect[];
+	}[] = [];
 
 	for (const cr of sorted) {
 		const prev = lines[lines.length - 1];
@@ -139,8 +163,9 @@ function mergeIntoLines(rects: DOMRect[]): LineBox[] {
 			prev.maxBottom = Math.max(prev.maxBottom, cr.bottom);
 			prev.bottoms.push(cr.bottom);
 			prev.heights.push(cr.height);
+			prev.spans.push(cr);
 		} else {
-			lines.push({ left: cr.left, right: cr.right, top: cr.top, maxBottom: cr.bottom, bottoms: [cr.bottom], heights: [cr.height] });
+			lines.push({ left: cr.left, right: cr.right, top: cr.top, maxBottom: cr.bottom, bottoms: [cr.bottom], heights: [cr.height], spans: [cr] });
 		}
 	}
 
@@ -148,6 +173,29 @@ function mergeIntoLines(rects: DOMRect[]): LineBox[] {
 		const bottom = Math.max(median(l.bottoms), l.top + 1);
 		const boxHeight = bottom - l.top;
 		const refHeight = median(l.heights);
-		return { left: l.left, right: l.right, top: l.top, bottom, heightRatio: Math.min(1, refHeight / boxHeight) };
+		return {
+			left: l.left,
+			right: l.right,
+			top: l.top,
+			bottom,
+			heightRatio: Math.min(1, refHeight / boxHeight),
+			hasGap: hasInternalGap(l.spans),
+		};
 	});
+}
+
+/**
+ * A horizontal jump between two spans on the same line much wider than normal
+ * letter/word spacing — the mark of a selection that stepped over a
+ * non-selectable formula. (Mirrors the cross-segment check in
+ * text-select-copy.ts, applied here within one already-grouped line instead of
+ * across two selection segments.)
+ */
+function hasInternalGap(spans: DOMRect[]): boolean {
+	const sorted = [...spans].sort((a, b) => a.left - b.left);
+	for (let i = 1; i < sorted.length; i++) {
+		const gap = sorted[i].left - sorted[i - 1].right;
+		if (gap > Math.max(sorted[i].height, sorted[i - 1].height) * 1.5) return true;
+	}
+	return false;
 }

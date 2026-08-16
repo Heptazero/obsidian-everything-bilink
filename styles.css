@@ -179,6 +179,19 @@ body[data-bilink-sel-style="underline"] .pdf-bilink-kind-selection:hover::after 
 	height: calc(var(--bilink-underline-thickness) + 1px);
 }
 
+/* A gap-bridging line's box comes entirely from the flanking text on either
+   side of a skipped formula — nothing here knows how far the formula's own
+   ink actually extends. Lifting the mark upward by the configured offset (the
+   normal-line rule above) risks landing inside that unmeasured region and
+   visually cutting through the formula. Pushing down by the same amount
+   instead — below the flanking text's own baseline — trades a slightly loose
+   fit against plain text for never sitting on top of glyphs it can't see.
+   Higher specificity than the rule above (two classes vs one) wins regardless
+   of source order. */
+body[data-bilink-sel-style="underline"] .pdf-bilink-kind-selection.pdf-bilink-has-gap::after {
+	bottom: calc(-1 * var(--bilink-underline-offset));
+}
+
 body[data-bilink-sel-style="background"] .pdf-bilink-kind-selection {
 	background-color: color-mix(in srgb, var(--bilink-color) 22%, transparent);
 	border-radius: 2px;

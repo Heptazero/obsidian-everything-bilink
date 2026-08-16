@@ -35,7 +35,7 @@ function buildRectItems(app: App, pdfFile: TFile, refs: BacklinkRef[]): Highligh
 	}
 	return [...groups.values()].map((g) => ({
 		page: g.page,
-		rects: [{ rect: g.rect, heightRatio: 1 }],
+		rects: [{ rect: g.rect, heightRatio: 1, hasGap: false }],
 		refs: g.refs,
 		editable: true,
 		copyLink: () => {
@@ -186,12 +186,18 @@ export function renderBacklinkHighlights(app: App, pdfFile: TFile, pageView: PDF
 
 	for (const item of items) {
 		// One item may draw several boxes (multi-line selection); they share handlers.
-		for (const { rect, heightRatio } of item.rects) {
+		for (const { rect, heightRatio, hasGap } of item.rects) {
 			// Rect selections stay boxes (they represent an actual region); text
 			// selections render as an underline (reads more like normal markup).
-			const box = layer.createDiv(
-				`pdf-bilink-persistent-highlight ${item.editable ? "pdf-bilink-kind-rect" : "pdf-bilink-kind-selection"}`
-			);
+			const classes = [
+				"pdf-bilink-persistent-highlight",
+				item.editable ? "pdf-bilink-kind-rect" : "pdf-bilink-kind-selection",
+			];
+			// A gap-bridging line has no text-layer geometry for whatever it skipped
+			// over (usually a formula), so the mark can't be trusted to hug the
+			// baseline here — see styles.css, which pushes it down instead of up.
+			if (hasGap) classes.push("pdf-bilink-has-gap");
+			const box = layer.createDiv(classes.join(" "));
 			box.setCssStyles({ pointerEvents: "auto", cursor: "pointer" });
 			// Scales the underline's configured offset down when this box is taller
 			// than a normal single line (a formula character or super/subscript
