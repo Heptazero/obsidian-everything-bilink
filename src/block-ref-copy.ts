@@ -37,19 +37,14 @@ function sanitizeQuoteText(text: string): string {
 }
 
 /**
- * Copies `> {selected text}[[note#^blockid|↗]]` for the current editor selection.
- * The real text sits in the blockquote body (rendered as normal Markdown — LaTeX,
- * bold, etc. all work); the link carries only a jump arrow, since a wikilink
- * ALIAS is always rendered as plain text in Obsidian — putting the actual content
- * there (the previous approach) silently broke any formula in the selection.
- * Navigation lands on the whole block (Obsidian's native finest granularity).
- *
- * The `^blockid` marker is only written into the note AFTER the clipboard write
- * succeeds — previously it was written unconditionally up front, so even a copy
- * that failed (or was never actually pasted anywhere) left a permanent orphaned
+ * Shared by both block-reference copy modes below. Finds/creates the `^blockid`
+ * on the selection's containing block, builds the clipboard text via `template`,
+ * and only writes the id into the note AFTER the clipboard write succeeds —
+ * previously it was written unconditionally up front, so even a copy that
+ * failed (or was never actually pasted anywhere) left a permanent orphaned
  * marker with nothing referencing it.
  */
-export async function copyBlockReference(app: App, settings: BilinkSettings): Promise<void> {
+async function copyWithBlockId(app: App, settings: BilinkSettings, template: string): Promise<void> {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	if (!view) {
 		new Notice("先在一篇笔记里选中文字");
@@ -70,22 +65,34 @@ export async function copyBlockReference(app: App, settings: BilinkSettings): Pr
 	const id = existing ?? Math.random().toString(36).slice(2, 8);
 
 	const link = app.fileManager.generateMarkdownLink(file, "", `#^${id}`, settings.jumpLabel || undefined);
-	const quote = applyTemplate(settings.blockRefTemplate, {
-		text: sanitizeQuoteText(selectedText),
-		link,
-		file: file.basename,
-		page: "",
-	});
+	const text = applyTemplate(template, { text: sanitizeQuoteText(selectedText), link, file: file.basename, page: "" });
 
 	try {
-		await navigator.clipboard.writeText(quote);
+		await navigator.clipboard.writeText(text);
 	} catch (err) {
 		new Notice(`复制失败,笔记未被修改: ${err instanceof Error ? err.message : err}`);
 		return;
 	}
 
 	if (!existing) writeBlockId(editor, end, id);
-	new Notice("已复制引用链接");
+	new Notice("已复制");
+}
+
+/**
+ * `> {selected text}[[note#^blockid|↗]]` — the real text sits in the blockquote
+ * body (rendered as normal Markdown — LaTeX, bold, etc. all work); the link
+ * carries only a jump arrow, since a wikilink ALIAS is always rendered as plain
+ * text in Obsidian — putting the actual content there (the previous approach)
+ * silently broke any formula in the selection. Navigation lands on the whole
+ * block (Obsidian's native finest granularity).
+ */
+export function copyBlockReference(app: App, settings: BilinkSettings): Promise<void> {
+	return copyWithBlockId(app, settings, settings.blockRefTemplate);
+}
+
+/** Just `[[note#^blockid|↗]]` — no quoted text, so nothing about the copy can be broken by LaTeX in the selection. */
+export function copyBlockReferenceLinkOnly(app: App, settings: BilinkSettings): Promise<void> {
+	return copyWithBlockId(app, settings, settings.blockLinkOnlyTemplate);
 }
 
 export function hasActiveNoteSelection(app: App): boolean {

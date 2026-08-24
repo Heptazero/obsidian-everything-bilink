@@ -1,7 +1,7 @@
 import { Component, FileView, MarkdownView, Notice, Plugin, TFile } from "obsidian";
 import { findBacklinksForPDF, type BacklinkRef } from "./backlink-index";
 import { cleanUnusedBlockIds } from "./block-ref-cleanup";
-import { copyBlockReference, hasActiveNoteSelection } from "./block-ref-copy";
+import { copyBlockReference, copyBlockReferenceLinkOnly, hasActiveNoteSelection } from "./block-ref-copy";
 import { renderBacklinkHighlights } from "./backlink-render";
 import { registerRectEmbed } from "./embed";
 import { buildSubpath, registerLinkOpenPatch } from "./link-open";
@@ -58,11 +58,11 @@ export default class PdfBilinkPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on("layout-change", () => this.scanPDFViews()));
 		this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.scanPDFViews()));
 
-		this.addRibbonIcon("frame", "Everything Bilink: 框选区域 → 复制链接", () => this.armRectSelect());
-		this.addRibbonIcon("type", "Everything Bilink: 在 PDF 上添加文字框", () => this.armTextPlace());
+		this.addRibbonIcon("frame", "Everything Bilink: 框选复制链接", () => this.armRectSelect());
+		this.addRibbonIcon("type", "Everything Bilink: 添加文字框", () => this.armTextPlace());
 		this.addCommand({
 			id: "draw-region-link",
-			name: "框选区域 → 复制链接(笔记里是活嵌入,Excalidraw 里是带链接的图片)",
+			name: "[PDF 框选] 复制链接",
 			checkCallback: (checking) => {
 				const view = this.app.workspace.getActiveViewOfType(FileView);
 				const active = !!view && view.getViewType() === "pdf";
@@ -72,7 +72,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "add-text-box",
-			name: "在 PDF 上添加文字框",
+			name: "[PDF] 添加文字框",
 			checkCallback: (checking) => {
 				const view = this.app.workspace.getActiveViewOfType(FileView);
 				const active = !!view && view.getViewType() === "pdf";
@@ -82,7 +82,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "copy-selection-as-wikilink",
-			name: "[PDF 选区] 复制为单行(文字 + 跳转链接)",
+			name: "[PDF 选区] 单行",
 			checkCallback: (checking) => {
 				const active = hasActiveTextSelection();
 				if (!checking && active) void copySelection(this.app, this.bilinkSettings, "inline");
@@ -91,7 +91,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "copy-selection-as-quote",
-			name: "[PDF 选区] 复制为引用块(> 文字 + 跳转链接)",
+			name: "[PDF 选区] 引用块",
 			checkCallback: (checking) => {
 				const active = hasActiveTextSelection();
 				if (!checking && active) void copySelection(this.app, this.bilinkSettings, "quote");
@@ -100,7 +100,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "copy-selection-link-only",
-			name: "[PDF 选区] 只复制跳转链接(不含原文,不受公式影响)",
+			name: "[PDF 选区] 仅链接",
 			checkCallback: (checking) => {
 				const active = hasActiveTextSelection();
 				if (!checking && active) void copySelection(this.app, this.bilinkSettings, "link-only");
@@ -109,7 +109,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "copy-pdf-outline",
-			name: "[PDF] 复制大纲(书签)为带跳转链接的列表",
+			name: "[PDF] 大纲",
 			checkCallback: (checking) => {
 				const active = !!getActivePDFView(this.app);
 				if (!checking && active) void copyPdfOutline(this.app, this.bilinkSettings);
@@ -118,7 +118,7 @@ export default class PdfBilinkPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "copy-block-reference",
-			name: "[笔记选区,非 PDF] 复制为块引用",
+			name: "[笔记块引用] 引用块",
 			checkCallback: (checking) => {
 				const active = hasActiveNoteSelection(this.app);
 				if (!checking && active) void copyBlockReference(this.app, this.bilinkSettings);
@@ -126,8 +126,17 @@ export default class PdfBilinkPlugin extends Plugin {
 			},
 		});
 		this.addCommand({
+			id: "copy-block-reference-link-only",
+			name: "[笔记块引用] 仅链接",
+			checkCallback: (checking) => {
+				const active = hasActiveNoteSelection(this.app);
+				if (!checking && active) void copyBlockReferenceLinkOnly(this.app, this.bilinkSettings);
+				return active;
+			},
+		});
+		this.addCommand({
 			id: "clean-unused-block-ids",
-			name: "[笔记] 清理未被引用的块标记(^id)",
+			name: "[笔记] 清理块标记",
 			checkCallback: (checking) => {
 				const active = !!this.app.workspace.getActiveViewOfType(MarkdownView);
 				if (!checking && active) void cleanUnusedBlockIds(this.app);
@@ -246,8 +255,9 @@ export default class PdfBilinkPlugin extends Plugin {
 		const subpath = buildSubpath(pageNumber, rect);
 
 		if (this.bilinkSettings.rectCopyMode === "link") {
-			// Same template as "PDF 选区 → 仅链接" — no image, just the configured
-			// link style, for when the crop preview isn't wanted.
+			// Same "[PDF] 仅链接" template PDF-selection link-only copy uses — no
+			// image, just the configured link style, for when the crop preview
+			// isn't wanted.
 			const link = this.app.fileManager.generateMarkdownLink(file, "", subpath, this.bilinkSettings.jumpLabel || undefined);
 			const text = applyTemplate(this.bilinkSettings.linkOnlyTemplate, {
 				text: "",

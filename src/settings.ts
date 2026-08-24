@@ -23,6 +23,7 @@ export interface BilinkSettings {
 	quoteTemplate: string;
 	linkOnlyTemplate: string;
 	blockRefTemplate: string;
+	blockLinkOnlyTemplate: string;
 	outlineTemplate: string;
 	formulaRecovery: FormulaRecovery;
 }
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: BilinkSettings = {
 	quoteTemplate: "> {{text}}{{link}}\\n",
 	linkOnlyTemplate: "{{link}}",
 	blockRefTemplate: "> {{text}}{{link}}\\n",
+	blockLinkOnlyTemplate: "{{link}}",
 	outlineTemplate: "{{indent}}- {{link}}",
 	formulaRecovery: "auto",
 };
@@ -119,8 +121,8 @@ export class BilinkSettingTab extends PluginSettingTab {
 		containerEl.createEl("h3", { text: "PDF 上的标记样式" });
 
 		new Setting(containerEl)
-			.setName("文字选区的标记方式")
-			.setDesc("下划线更贴合正文阅读;背景高亮更醒目,但跨公式的选区会把空白也涂上。")
+			.setName("选区标记样式")
+			.setDesc("下划线更贴合阅读;背景高亮更醒目,但跨公式的选区会把空白也涂上。")
 			.addDropdown((d) =>
 				d
 					.addOptions({ underline: "下划线", background: "背景高亮", box: "边框" })
@@ -131,7 +133,7 @@ export class BilinkSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl).setName("框选区域的标记方式").addDropdown((d) =>
+		new Setting(containerEl).setName("框选标记样式").addDropdown((d) =>
 			d
 				.addOptions({ box: "边框", background: "背景高亮" })
 				.setValue(this.settings.rectStyle)
@@ -142,11 +144,11 @@ export class BilinkSettingTab extends PluginSettingTab {
 		);
 
 		new Setting(containerEl)
-			.setName("框选区域粘贴为")
-			.setDesc("图片嵌入可以直接在笔记里预览裁剪出的画面;仅链接不出图,粘贴出来是「PDF 选区 → 仅链接」那条模板配置的样式。")
+			.setName("框选粘贴为")
+			.setDesc("图片嵌入可直接预览裁剪画面;仅链接不出图,格式见下方「[PDF] 仅链接」模板。")
 			.addDropdown((d) =>
 				d
-					.addOptions({ embed: "图片嵌入(可预览)", link: "仅链接(不出图)" })
+					.addOptions({ embed: "图片嵌入", link: "仅链接" })
 					.setValue(this.settings.rectCopyMode)
 					.onChange((v) => {
 						this.settings.rectCopyMode = v as RectCopyMode;
@@ -175,7 +177,7 @@ export class BilinkSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("下划线粗细(px)")
+			.setName("下划线粗细")
 			.addSlider((s) =>
 				s
 					.setLimits(1, 6, 1)
@@ -188,8 +190,8 @@ export class BilinkSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("下划线离底边的距离(%)")
-			.setDesc("文字选区框的高度包含了上下伸出的空白,0% 会明显低于字母。数值越大越贴近字。")
+			.setName("下划线偏移")
+			.setDesc("普通行往上抬这么多贴近文字;跨公式的行反过来往下让开同样的量,避免盖住公式。")
 			.addSlider((s) =>
 				s
 					.setLimits(0, 40, 1)
@@ -201,11 +203,11 @@ export class BilinkSettingTab extends PluginSettingTab {
 					})
 			);
 
-		containerEl.createEl("h3", { text: "复制出来的文本格式" });
+		containerEl.createEl("h3", { text: "复制文本格式" });
 
 		new Setting(containerEl)
-			.setName("跳转链接的显示文字")
-			.setDesc("链接本身显示成什么。留空则显示文件名。")
+			.setName("跳转链接文字")
+			.setDesc("留空则显示文件名。")
 			.addText((t) =>
 				t.setValue(this.settings.jumpLabel).onChange((v) => {
 					this.settings.jumpLabel = v;
@@ -213,10 +215,10 @@ export class BilinkSettingTab extends PluginSettingTab {
 				})
 			);
 
-		const template = (name: string, key: keyof BilinkSettings, desc: string) =>
+		const template = (name: string, key: keyof BilinkSettings, desc?: string) =>
 			new Setting(containerEl)
 				.setName(name)
-				.setDesc(`${desc} ${TEMPLATE_HELP}`)
+				.setDesc(`${desc ?? ""} ${TEMPLATE_HELP}`.trim())
 				.addText((t) =>
 					t.setValue(String(this.settings[key])).onChange((v) => {
 						(this.settings as unknown as Record<string, string>)[key as string] = v;
@@ -224,16 +226,17 @@ export class BilinkSettingTab extends PluginSettingTab {
 					})
 				);
 
-		template("PDF 选区 → 单行", "selectionTemplate", "「复制为单行」命令的输出。");
-		template("PDF 选区 → 引用块", "quoteTemplate", "「复制为引用块」命令的输出。");
-		template("PDF 选区 → 仅链接", "linkOnlyTemplate", "「只复制跳转链接」命令的输出,不含原文,可完全绕开公式复制问题。");
-		template("笔记块引用", "blockRefTemplate", "「复制为块引用」命令的输出。");
-		template("PDF 大纲每一行", "outlineTemplate", "额外变量:{{indent}} 层级缩进、{{title}} 标题。");
+		template("[PDF 选区] 单行", "selectionTemplate");
+		template("[PDF 选区] 引用块", "quoteTemplate");
+		template("[PDF] 仅链接", "linkOnlyTemplate", "PDF 选区和框选的「仅链接」共用这份模板,不含原文。");
+		template("[笔记块引用] 引用块", "blockRefTemplate");
+		template("[笔记块引用] 仅链接", "blockLinkOnlyTemplate");
+		template("[PDF] 大纲", "outlineTemplate", "额外变量:{{indent}} 层级缩进、{{title}} 标题。");
 
 		containerEl.createEl("h3", { text: "其他" });
 
 		new Setting(containerEl)
-			.setName("选区跨过公式时")
+			.setName("选区跨公式时")
 			.setDesc(
 				"PDF 的公式通常不在文字层里,选中一段跨公式的文字会漏掉它。自动回填会在同名 _md.md 里按前后文定位补上;手动挑选会在自动失败时弹窗让你选。"
 			)
