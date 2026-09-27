@@ -21,8 +21,6 @@ and note blocks. Same idea both times — reference something, jump back and for
   copying reproduces them.
 - Any bookmarks the PDF ships with can be copied out as a nested Markdown list,
   each line linking to the page it jumps to.
-- Freeform text boxes can be placed directly on a PDF page — draggable, resizable,
-  colorable — stored in the plugin's own data, not written into the PDF file.
 - Highlighted regions can be edited in place (drag to move/resize, writes the new
   coordinates back into every note that references it) or deleted everywhere at once.
 

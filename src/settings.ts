@@ -56,10 +56,10 @@ export function applyTemplate(template: string, vars: Record<string, string>): s
 }
 
 /**
- * Read-modify-write of `data.json`. Settings and the text-box store are separate
- * owners of disjoint keys in the same file; each must merge onto whatever is
- * currently on disk rather than writing its own slice wholesale, or saving one
- * would wipe the other.
+ * Read-modify-write of `data.json` — merges onto whatever is currently on disk
+ * rather than writing a bare `{settings}` object, so a leftover key from a
+ * removed feature (or one a future feature adds) isn't silently wiped out by
+ * an unrelated settings save.
  */
 export async function patchPluginData(plugin: Plugin, patch: Record<string, unknown>): Promise<void> {
 	const existing = ((await plugin.loadData()) as Record<string, unknown> | null) ?? {};

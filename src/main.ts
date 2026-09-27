@@ -20,26 +20,16 @@ import {
 	type BilinkSettings,
 } from "./settings";
 import { copySelection, hasActiveTextSelection } from "./text-select-copy";
-import {
-	attachTextPlaceListener,
-	placeNewTextBox,
-	renderTextBoxes,
-	TextBoxStore,
-	type TextPlaceController,
-} from "./text-box";
 
 const trackedViews = new WeakSet<FileView>();
 const trackedPageDivs = new WeakSet<HTMLDivElement>();
 
 export default class PdfBilinkPlugin extends Plugin {
 	private rectSelect: RectSelectController = { armed: false };
-	private textPlace: TextPlaceController = { armed: false };
-	private textStore = new TextBoxStore(this);
 	private bilinkSettings!: BilinkSettings;
 
 	async onload() {
 		this.bilinkSettings = await loadSettings(this);
-		await this.textStore.load();
 
 		applyStyleSettings(this.bilinkSettings);
 		this.register(() => clearStyleSettings());
@@ -59,7 +49,6 @@ export default class PdfBilinkPlugin extends Plugin {
 		this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.scanPDFViews()));
 
 		this.addRibbonIcon("frame", "Everything Bilink: 框选复制链接", () => this.armRectSelect());
-		this.addRibbonIcon("type", "Everything Bilink: 添加文字框", () => this.armTextPlace());
 		this.addCommand({
 			id: "draw-region-link",
 			name: "[PDF 框选] 复制链接",
@@ -67,16 +56,6 @@ export default class PdfBilinkPlugin extends Plugin {
 				const view = this.app.workspace.getActiveViewOfType(FileView);
 				const active = !!view && view.getViewType() === "pdf";
 				if (!checking && active) this.armRectSelect();
-				return active;
-			},
-		});
-		this.addCommand({
-			id: "add-text-box",
-			name: "[PDF] 添加文字框",
-			checkCallback: (checking) => {
-				const view = this.app.workspace.getActiveViewOfType(FileView);
-				const active = !!view && view.getViewType() === "pdf";
-				if (!checking && active) this.armTextPlace();
 				return active;
 			},
 		});
@@ -147,14 +126,7 @@ export default class PdfBilinkPlugin extends Plugin {
 
 	private armRectSelect(): void {
 		this.rectSelect.armed = true;
-		this.textPlace.armed = false;
 		new Notice("在 PDF 上拖动框选一块区域");
-	}
-
-	private armTextPlace(): void {
-		this.textPlace.armed = true;
-		this.rectSelect.armed = false;
-		new Notice("在 PDF 上点击一处放置文字框");
 	}
 
 	private scanPDFViews(): void {
@@ -205,7 +177,7 @@ export default class PdfBilinkPlugin extends Plugin {
 
 		onPageReady(view, component, (pageNumber, pageView) => {
 			if (!pageView.pdfPage?.view) return; // guard not-yet-ready page stubs
-			const file = currentFile();
+			currentFile();
 			pageViews.set(pageNumber, pageView);
 
 			// PDF.js may re-fire pagerendered for the same (recycled) div; only wire
@@ -216,17 +188,9 @@ export default class PdfBilinkPlugin extends Plugin {
 				const detachRect = attachRectSelectListener(pageView, this.rectSelect, (rect) =>
 					this.completeRectSelection(view, pageNumber, rect)
 				);
-				const detachText = attachTextPlaceListener(pageView, this.textPlace, (x, y) => {
-					const f = currentFile();
-					if (f) placeNewTextBox(this.app, pageView, f.path, pageNumber, this.textStore, x, y);
-				});
 				component.register(detachRect);
-				component.register(detachText);
 			}
 
-			// Both must re-run on every (re)render — pdf.js wipes the overlay layer on
-			// zoom/scroll, so drawing these only once per div made them disappear.
-			if (file) renderTextBoxes(this.app, pageView, file.path, pageNumber, this.textStore);
 			refreshHighlights();
 		});
 
